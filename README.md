@@ -22,6 +22,24 @@ This project is independent of Sonatype. It is not an official Community Edition
 
 Supported formats: APT, Cargo, CocoaPods, Composer, Conan, Conda, Docker, Git LFS, Go, Helm, Hugging Face, Maven, npm, NuGet, P2, PyPI, R, Raw, RubyGems, Swift, Terraform, and Yum.
 
+## Clone the source repository
+
+To build NexSteem from source or work on the Core integration, clone the repository with its pinned upstream submodule:
+
+```bash
+git clone --recurse-submodules https://github.com/steemax/nexsteem.git
+```
+
+This also fetches the public Core sources into `upstream/nexus-public`. If you already cloned without submodules, run the following from your checkout's root:
+
+```bash
+git submodule update --init --recursive
+```
+
+GitHub's automatically generated source ZIP does not include the Core submodule contents. Use the recursive clone or the complete corresponding-source archive for a source build. See [Build from source](docs/INSTALL.md#build-from-source) for build commands and prerequisites.
+
+Deploying prebuilt Docker images or installing the Helm chart does not require downloading the Core submodule; the deployment examples below use a plain clone where only Compose or chart files are needed.
+
 ## Choose a deployment
 
 | Deployment | Use it for | Components |
@@ -35,7 +53,7 @@ Supported formats: APT, Cargo, CocoaPods, Composer, Conan, Conda, Docker, Git LF
 
 **Built-in replication and automatic failover are provided only by the Kubernetes cluster distribution.** The standalone Docker image does not include that layer. The matching PostgreSQL/Patroni image is `steemax/nexsteem:postgres-17-patroni4.1.5-r3-amd64`. All three project images use one Docker Hub repository, with separate component tags.
 
-**Release status:** standalone ext3, cluster k8s10 and PostgreSQL r3 have been built with verified notices and corresponding-source links. Standalone UI/login/onboarding and all 51 recipe registrations were verified. The exact cluster boot and ordered upgrade passed with both members ready, matching provenance, remote PostgreSQL sync and two blob copies. The full artifact-client and fault matrix was not rerun for this UI/legal rebuild. Docker Hub, GitHub Releases and the Helm endpoint remain **publication pending**; the commands below apply after publication. See [INSTALL](docs/INSTALL.md) for exact image identities and build options.
+**Release status:** standalone ext3, cluster k8s10 and PostgreSQL r3 have been built with verified notices and corresponding-source links. Standalone UI/login/onboarding and all 51 recipe registrations were verified. The exact cluster boot and ordered upgrade passed with both members ready, matching provenance, remote PostgreSQL sync and two blob copies. The full artifact-client and fault matrix was not rerun for this UI/legal rebuild. The GitHub Pages Helm repository is online, and chart `0.1.5` was downloaded and its checksum verified. Docker Hub image and GitHub binary-release publication remain separate steps; ensure the selected images are accessible before deployment. See [INSTALL](docs/INSTALL.md) for exact image identities and build options.
 
 The designated source release is [3.96.4-01-ext3-k8s10](https://github.com/steemax/nexsteem/releases/tag/3.96.4-01-ext3-k8s10), with complete archive [nexsteem-3.96.4-01-ext3-k8s10-source.tar.gz](https://github.com/steemax/nexsteem/releases/download/3.96.4-01-ext3-k8s10/nexsteem-3.96.4-01-ext3-k8s10-source.tar.gz). These are planned publication links, not existing downloads.
 
@@ -125,7 +143,7 @@ If the witness is a tainted control-plane node, add a matching `tolerations` ent
 
 The chart defaults place PostgreSQL on three separate data hosts and etcd across `dc1`, `dc2` and `witness`. This override runs two Nexus members, one per data center. Keep production anti-affinity enabled. Create the client-facing TLS Secret in namespace `nexus` and adapt the ingress namespace selector for your controller.
 
-After the maintainer pushes the images and enables the GitHub Pages Helm repository:
+Use the online GitHub Pages Helm repository after ensuring the selected images are available to your Kubernetes workers:
 
 ```sh
 helm repo add nexsteem https://steemax.github.io/nexsteem/charts
@@ -135,7 +153,7 @@ helm upgrade --install nexus nexsteem/nexsteem --version 0.1.5 \
   --values production-values.yaml --wait --timeout 15m
 ```
 
-The Helm endpoint is prepared for publication and is not online until the repository is pushed and Pages is enabled. You can also install directly from Git, without waiting for a chart registry:
+You can also install the chart directly from a Git checkout:
 
 ```sh
 git clone https://github.com/steemax/nexsteem.git
