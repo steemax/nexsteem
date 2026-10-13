@@ -1,0 +1,3 @@
+/* SPDX-License-Identifier: EPL-1.0 */
+package org.sonatype.nexus.repository.openformats.cargo;
+@org.springframework.stereotype.Component @org.springframework.context.annotation.Scope("prototype") @org.springframework.beans.factory.annotation.Qualifier("cargo") public class CargoSecurity extends org.sonatype.nexus.repository.openformats.OpenSecurityFacet { public CargoSecurity(CargoSecurityContributor contributor,@org.springframework.beans.factory.annotation.Qualifier("simple") org.sonatype.nexus.repository.security.VariableResolverAdapter resolver,org.sonatype.nexus.repository.security.ContentPermissionChecker checker) { super(contributor,resolver,checker); } }

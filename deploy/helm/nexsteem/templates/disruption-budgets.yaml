@@ -1,0 +1,21 @@
+{{- range $component := list "etcd" "postgres" "router" "nexus" }}
+{{- if or (ne $component "nexus") $.Values.nexus.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "nxc.name" $ }}-{{ $component }}
+spec:
+  {{- if eq $component "router" }}
+  minAvailable: 1
+  {{- else if eq $component "nexus" }}
+  minAvailable: {{ min 2 (sub (int $.Values.nexus.replicas) 1) }}
+  {{- else }}
+  minAvailable: 2
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "nxc.labels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $component }}
+{{- end }}
+{{- end }}

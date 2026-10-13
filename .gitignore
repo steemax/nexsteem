@@ -1,0 +1,20 @@
+/build/
+/dist/
+/.env
+**/target/
+**/__pycache__/
+*.pyc
+.DS_Store
+
+# Local credentials and runtime state
+.env.*
+!.env.example
+*.kubeconfig
+*.p12
+*.pfx
+*.jks
+*.hprof
+*.jfr
+admin.password
+secrets/
+reports/

@@ -1,0 +1,8 @@
+{
+  "artifact": "nexus-repository-r-3.32.1-01-sources.jar",
+  "sha256": "809963d15c937b5be1746b5dce35c67b12357908ff951cfa12a37ec761f543ed",
+  "license": "EPL-1.0",
+  "source": "https://repo.maven.apache.org/maven2/org/sonatype/nexus/plugins/nexus-repository-r/3.32.1-01/nexus-repository-r-3.32.1-01-sources.jar",
+  "source_version": "3.32.1-01",
+  "upstream_core_version": "3.96.4-01"
+}

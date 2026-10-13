@@ -1,0 +1,3 @@
+/* SPDX-License-Identifier: EPL-1.0 */
+package org.sonatype.nexus.repository.openformats.swift;
+@org.springframework.stereotype.Component @org.springframework.context.annotation.Scope("prototype") @org.springframework.beans.factory.annotation.Qualifier("swift") public class SwiftSecurity extends org.sonatype.nexus.repository.openformats.OpenSecurityFacet { public SwiftSecurity(SwiftSecurityContributor contributor,@org.springframework.beans.factory.annotation.Qualifier("simple") org.sonatype.nexus.repository.security.VariableResolverAdapter resolver,org.sonatype.nexus.repository.security.ContentPermissionChecker checker) { super(contributor,resolver,checker); } }

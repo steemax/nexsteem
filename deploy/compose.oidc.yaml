@@ -1,0 +1,12 @@
+# Disposable Keycloak for the browser Authorization Code + PKCE acceptance test.
+services:
+  keycloak-oidc:
+    image: quay.io/keycloak/keycloak:26.5.2
+    platform: linux/amd64
+    command: [start-dev, --import-realm]
+    environment:
+      KC_HOSTNAME: http://127.0.0.1:18085
+    ports:
+      - "127.0.0.1:18085:8080"
+    volumes:
+      - ../tests/fixtures/keycloak-oidc-realm.json:/opt/keycloak/data/import/realm.json:ro

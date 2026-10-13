@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+# Standby members run the integrated Java replication/coordinator service.
+# The supervisor launches /usr/local/bin/nexus-launch only while fenced owner.
+test -n "${NX_CLUSTER_ID:-}" || { echo 'NX_CLUSTER_ID is required' >&2; exit 1; }
+test -n "${NX_CLUSTER_NODE_ID:-}" || { echo 'NX_CLUSTER_NODE_ID is required' >&2; exit 1; }
+test -n "${NX_CLUSTER_SECRET_FILE:-}" && test -r "$NX_CLUSTER_SECRET_FILE" || {
+  echo 'Readable cluster authentication secret file is required' >&2; exit 1;
+}
+JAVA_HOME=${JAVA_HOME:-/opt/nexus-java}
+NX_CLUSTER_SUPERVISOR_JAVA_OPTS=${NX_CLUSTER_SUPERVISOR_JAVA_OPTS:--Xms32m -Xmx256m}
+# Options are operator-owned arguments; no eval or expansion of credentials.
+# shellcheck disable=SC2086
+exec "$JAVA_HOME/bin/java" $NX_CLUSTER_SUPERVISOR_JAVA_OPTS \
+  -Djdk.httpclient.allowRestrictedHeaders=host \
+  -cp '/opt/nexus-cluster/lib/*' org.sonatype.nexus.cluster.control.ClusterSupervisor

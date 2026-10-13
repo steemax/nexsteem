@@ -1,0 +1,68 @@
+{{- if .Release.IsUpgrade }}
+{{- $name := include "nxc.name" . -}}
+{{- $domain := include "nxc.domain" . -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}-schema-upgrade-{{ .Release.Revision }}
+  labels:
+    {{- include "nxc.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-upgrade
+    helm.sh/hook-weight: "20"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  ttlSecondsAfterFinished: 3600
+  activeDeadlineSeconds: 600
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        {{- include "nxc.labels" . | nindent 8 }}
+        app.kubernetes.io/component: schema-upgrade
+    spec:
+      {{- include "nxc.commonPod" . | nindent 6 }}
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext: {runAsUser: 999, runAsGroup: 999, fsGroup: 999}
+      containers:
+        - name: schema
+          image: {{ .Values.postgres.image | quote }}
+          imagePullPolicy: {{ .Values.postgres.pullPolicy }}
+          command: [/opt/patroni/bin/python, /etc/nexus-postgres/upgrade.py]
+          env:
+            - {name: PG_HOST, value: {{ printf "%s-postgres-rw.%s" $name $domain | quote }}}
+            - {name: ETCD_SCOPE, value: {{ printf "/nexus-pg/%s/" $name | quote }}}
+            - name: ETCD_ENDPOINTS
+              value: {{ list (printf "https://%s-etcd-0-0.%s-etcd.%s:2379" $name $name $domain) (printf "https://%s-etcd-1-0.%s-etcd.%s:2379" $name $name $domain) (printf "https://%s-etcd-2-0.%s-etcd.%s:2379" $name $name $domain) | toJson | quote }}
+          resources:
+            {{- $job := get (default dict .Values.jobs) "schemaUpgrade" | default dict }}
+            {{- get $job "resources" | default (dict "requests" (dict "cpu" "50m" "memory" "64Mi") "limits" (dict "cpu" "1" "memory" "256Mi")) | toYaml | nindent 12 }}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}, readOnlyRootFilesystem: true}
+          volumeMounts:
+            - {name: config, mountPath: /etc/nexus-postgres, readOnly: true}
+            - {name: secrets, mountPath: /run/proof/secrets, readOnly: true}
+            - {name: tls, mountPath: /run/proof/tls, readOnly: true}
+            - {name: pg-ca, mountPath: /run/proof/pg, readOnly: true}
+      volumes:
+        - {name: config, configMap: {name: {{ $name }}-postgres}}
+        - name: secrets
+          secret:
+            secretName: {{ include "nxc.secret" . }}
+            defaultMode: 0440
+            items:
+              - {key: postgres-password, path: postgres-password}
+              - {key: etcd-proof-password, path: etcd-proof-password}
+        - name: tls
+          secret:
+            secretName: {{ include "nxc.tls" . }}
+            defaultMode: 0440
+            items:
+              - {key: etcd-ca.crt, path: ca.crt}
+              - {key: etcd-proof.crt, path: tls.crt}
+              - {key: etcd-proof.key, path: tls.key}
+        - name: pg-ca
+          secret:
+            secretName: {{ include "nxc.tls" . }}
+            items: [{key: postgres-ca.crt, path: ca.crt}]
+{{- end }}

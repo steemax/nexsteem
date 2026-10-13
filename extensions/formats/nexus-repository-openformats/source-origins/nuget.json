@@ -1,0 +1,17 @@
+{
+  "implementation": "Independent NuGet V3 hosted/proxy/group protocol with SQL/blob persistence and Nexus API-key realm",
+  "protocol_sources": [
+    "https://learn.microsoft.com/en-us/nuget/api/package-publish-resource",
+    "https://learn.microsoft.com/en-us/nuget/api/package-base-address-resource",
+    "https://learn.microsoft.com/en-us/nuget/api/registration-base-url-resource",
+    "https://learn.microsoft.com/en-us/nuget/api/search-query-service-resource"
+  ],
+  "third_party": [
+    {
+      "file": "src/main/java/org/sonatype/nexus/repository/openformats/nuget/NugetVersions.java",
+      "origin": "https://github.com/klboke/kkRepo/blob/9c2b87ca3851a180e929f8139803212846412a9c/protocol-nuget/src/main/java/com/github/klboke/kkrepo/protocol/nuget/NugetVersions.java",
+      "license": "Apache-2.0",
+      "source_sha256": "d32c0db24f125a1a94f2ed662a5739f6e745143405327d1fc0c0e2b4c9124dbb"
+    }
+  ]
+}

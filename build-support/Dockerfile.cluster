@@ -1,0 +1,60 @@
+# syntax=docker/dockerfile:1.7
+# Kubernetes additions to the standalone container image.
+ARG CORE_IMAGE=nexus-core-extended:3.96.4-01
+ARG BUILDER_IMAGE=nexus-extension-builder:3.96.4-01
+FROM ${CORE_IMAGE} AS core
+FROM ${BUILDER_IMAGE} AS cluster-builder
+WORKDIR /cluster-src
+ARG SOURCE_URL=https://github.com/steemax/nexsteem
+ARG SOURCE_ARCHIVE_URL=https://github.com/steemax/nexsteem/releases/download/3.96.4-01-ext3-k8s10/nexsteem-3.96.4-01-ext3-k8s10-source.tar.gz
+ARG SOURCE_SNAPSHOT_SHA256=""
+ARG SOURCE_ARCHIVE_SHA256=""
+COPY --from=core /opt/nexus/ /out/assembly/
+COPY LICENSE.txt NOTICE.txt THIRD-PARTY-NOTICES.md /cluster-src/project-notices/
+COPY licenses/ /cluster-src/project-notices/licenses/
+COPY extensions/cluster-api/ /cluster-src/extensions/cluster-api/
+COPY extensions/cluster-control/ /cluster-src/extensions/cluster-control/
+COPY extensions/cluster-storage/ /cluster-src/extensions/cluster-storage/
+COPY extensions/cluster-web/ /cluster-src/extensions/cluster-web/
+COPY build-support/embed-extension.py build-support/set-extension-version.py build-support/extension-provenance.py build-support/cluster-provenance.py build-support/package-notices.py /cluster-tools/
+COPY build-support/build-cluster.sh /cluster-tools/build-cluster.sh
+COPY build-support/Dockerfile.cluster /cluster-src/BUILD.Dockerfile
+COPY build-support/nexus-cluster-launch /cluster-src/BUILD.launcher
+COPY build-support/build-cluster.sh /cluster-src/BUILD.script
+RUN --mount=type=cache,target=/root/.m2 \
+    sh /cluster-tools/build-cluster.sh
+
+FROM debian:12-slim AS cluster-runtime
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl openssl util-linux libstdc++6 zlib1g tzdata \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 200 nexus && useradd --uid 200 --gid 200 --home-dir /var/lib/nexus --no-create-home nexus \
+    && mkdir -p /var/lib/nexus/etc /opt/nexus \
+    && chown -R 200:200 /var/lib/nexus
+COPY --from=core /opt/nexus-java/ /opt/nexus-java/
+COPY --from=core /usr/local/bin/nexus-launch /usr/local/bin/nexus-launch
+COPY --from=cluster-builder /out/assembly/ /opt/nexus/
+COPY --from=cluster-builder /out/cluster/ /opt/nexus-cluster/
+COPY build-support/nexus-cluster-launch /usr/local/bin/nexus-cluster-launch
+RUN chmod 0755 /usr/local/bin/nexus-cluster-launch
+ENV JAVA_HOME=/opt/nexus-java \
+    NEXUS_HOME=/opt/nexus \
+    NEXUS_DATA=/var/lib/nexus \
+    NEXUS_JAVA_OPTS="-Xms256m -Xmx1g -XX:MaxDirectMemorySize=512m"
+WORKDIR /opt/nexus
+USER 200:200
+VOLUME ["/var/lib/nexus"]
+EXPOSE 8081 8095
+HEALTHCHECK --interval=10s --timeout=7s --start-period=240s \
+  CMD curl --fail --silent "http://${NX_CLUSTER_PUBLIC_BIND_ADDRESS:-127.0.0.1}:8081/_cluster/health/member" || exit 1
+ARG NEXUS_VERSION=3.96.4-01
+ARG CLUSTER_REVISION=1
+ARG SOURCE_URL=https://github.com/steemax/nexsteem
+LABEL org.opencontainers.image.title="NexSteem with integrated Kubernetes replication" \
+      org.opencontainers.image.version="${NEXUS_VERSION}" \
+      org.opencontainers.image.revision="${NEXUS_VERSION}+k8s${CLUSTER_REVISION}" \
+      org.opencontainers.image.source="${SOURCE_URL}" \
+      org.opencontainers.image.documentation="${SOURCE_URL}/blob/main/docs/INSTALL.md" \
+      org.opencontainers.image.licenses="EPL-1.0"
+ENTRYPOINT ["/usr/local/bin/nexus-cluster-launch"]

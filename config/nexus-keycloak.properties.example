@@ -1,0 +1,11 @@
+# Place in $NEXUS_DATA/etc/nexus.properties and activate KeycloakRealm
+# through Security -> Realms after restarting Nexus.
+nexus.keycloak.enabled=true
+nexus.keycloak.issuer=https://keycloak.example/realms/nexus
+nexus.keycloak.audience=nexus
+nexus.keycloak.client-id=nexus
+# Explicit Keycloak client role -> existing Nexus role ID.
+# Create nexus-deployer with appropriate repository permissions first.
+nexus.keycloak.role-mapping=reader=nx-anonymous;deployer=nexus-deployer
+# HTTP only for a local Docker development realm.
+nexus.keycloak.allow-http=false

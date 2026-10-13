@@ -1,0 +1,177 @@
+# Optional static local volumes: create the directories on durable disks first.
+# Node labels nexus.cluster/slot identify the physical hosts; no data directories are shared.
+# Claim names assume release nexus / namespace nexus and two Nexus replicas.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata: {name: geo-local}
+provisioner: kubernetes.io/no-provisioner
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: geo-nexus-nexus-0}
+spec:
+  capacity: {storage: 100Gi}
+  volumeMode: Filesystem
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: geo-local
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    namespace: nexus
+    name: data-nexus-cluster-nexus-0-0
+  local: {path: /srv/nexus-volumes/nexus-0}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - {key: nexus.cluster/slot, operator: In, values: [dc1-a]}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: geo-nexus-nexus-1}
+spec:
+  capacity: {storage: 100Gi}
+  volumeMode: Filesystem
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: geo-local
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    namespace: nexus
+    name: data-nexus-cluster-nexus-1-0
+  local: {path: /srv/nexus-volumes/nexus-1}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - {key: nexus.cluster/slot, operator: In, values: [dc2-a]}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: geo-nexus-postgres-0}
+spec:
+  capacity: {storage: 20Gi}
+  volumeMode: Filesystem
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: geo-local
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    namespace: nexus
+    name: data-nexus-cluster-postgres-0-0
+  local: {path: /srv/nexus-volumes/postgres-0}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - {key: nexus.cluster/slot, operator: In, values: [dc1-a]}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: geo-nexus-postgres-1}
+spec:
+  capacity: {storage: 20Gi}
+  volumeMode: Filesystem
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: geo-local
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    namespace: nexus
+    name: data-nexus-cluster-postgres-1-0
+  local: {path: /srv/nexus-volumes/postgres-1}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - {key: nexus.cluster/slot, operator: In, values: [dc2-a]}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: geo-nexus-postgres-2}
+spec:
+  capacity: {storage: 20Gi}
+  volumeMode: Filesystem
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: geo-local
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    namespace: nexus
+    name: data-nexus-cluster-postgres-2-0
+  local: {path: /srv/nexus-volumes/postgres-2}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - {key: nexus.cluster/slot, operator: In, values: [dc2-b]}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: geo-nexus-etcd-0}
+spec:
+  capacity: {storage: 2Gi}
+  volumeMode: Filesystem
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: geo-local
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    namespace: nexus
+    name: data-nexus-cluster-etcd-0-0
+  local: {path: /srv/nexus-volumes/etcd-0}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - {key: nexus.cluster/slot, operator: In, values: [dc1-a]}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: geo-nexus-etcd-1}
+spec:
+  capacity: {storage: 2Gi}
+  volumeMode: Filesystem
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: geo-local
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    namespace: nexus
+    name: data-nexus-cluster-etcd-1-0
+  local: {path: /srv/nexus-volumes/etcd-1}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - {key: nexus.cluster/slot, operator: In, values: [dc2-a]}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: geo-nexus-etcd-2}
+spec:
+  capacity: {storage: 2Gi}
+  volumeMode: Filesystem
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: geo-local
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    namespace: nexus
+    name: data-nexus-cluster-etcd-2-0
+  local: {path: /srv/nexus-volumes/etcd-2}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - {key: nexus.cluster/slot, operator: In, values: [witness-a]}

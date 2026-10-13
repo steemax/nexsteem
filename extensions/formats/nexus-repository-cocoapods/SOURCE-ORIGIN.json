@@ -1,0 +1,9 @@
+{
+  "artifact": "nexus-repository-cocoapods-3.33.1-01-sources.jar",
+  "sha256": "5eeb91773f3e13cece646d9a4e958b3fb671944accabe0d84e4d250826608f0b",
+  "license": "EPL-1.0",
+  "source": "https://repo.maven.apache.org/maven2/org/sonatype/nexus/plugins/nexus-repository-cocoapods/3.33.1-01/nexus-repository-cocoapods-3.33.1-01-sources.jar",
+  "source_version": "3.33.1-01",
+  "upstream_core_version": "3.96.4-01",
+  "adaptation": "Historical public spec/Git/source parsing retained; independent SQL CDN proxy backend in datastore; public spec and source URLs are rendered for each caller."
+}

@@ -1,0 +1,8 @@
+{
+  "artifact": "nexus-repository-pypi-3.30.1-01-sources.jar",
+  "sha256": "9585337e3236506af6e8b96d3c41e76f873d8af226bee92f3e56199f09e978ae",
+  "license": "EPL-1.0",
+  "source": "https://repo.maven.apache.org/maven2/org/sonatype/nexus/plugins/nexus-repository-pypi/3.30.1-01/nexus-repository-pypi-3.30.1-01-sources.jar",
+  "source_version": "3.30.1-01",
+  "upstream_core_version": "3.96.4-01"
+}

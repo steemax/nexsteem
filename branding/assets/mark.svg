@@ -1,0 +1,13 @@
+<!-- SPDX-License-Identifier: EPL-1.0 -->
+<!-- Copyright (c) 2026 steemax. Original project artwork. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="brand-title brand-description">
+  <title id="brand-title">NexSteem</title>
+  <desc id="brand-description">Three connected nodes. An independent project mark by steemax.</desc>
+  <g stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 18H47M18 21L30 43M46 21L34 43" fill="none"/>
+    <circle cx="16" cy="18" r="9" fill="#2563eb" stroke="none"/>
+    <circle cx="48" cy="18" r="9" fill="#0ea5e9" stroke="none"/>
+    <circle cx="32" cy="46" r="9" fill="#06b6d4" stroke="none"/>
+  </g>
+  <g fill="#ffffff"><circle cx="16" cy="18" r="3"/><circle cx="48" cy="18" r="3"/><circle cx="32" cy="46" r="3"/></g>
+</svg>

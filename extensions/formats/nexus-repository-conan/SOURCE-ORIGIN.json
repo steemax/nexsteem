@@ -1,0 +1,10 @@
+{
+  "artifact": "nexus-repository-conan-3.32.1-01-sources.jar",
+  "sha256": "3ec60fff3fddbdb98ace71836793fb9b4faa9cdafe3dbccba7d44a22b9ea7349",
+  "license": "EPL-1.0",
+  "source": "https://repo.maven.apache.org/maven2/org/sonatype/nexus/plugins/nexus-repository-conan/3.32.1-01/nexus-repository-conan-3.32.1-01-sources.jar",
+  "source_version": "3.32.1-01",
+  "upstream_core_version": "3.96.4-01",
+  "original_source_preserved": "source-history/3.32.1-01",
+  "adaptation": "Historical Format/Security definitions retained; independent Conan2 hosted/proxy/group SQL protocol implementation in src/main/java/org/sonatype/nexus/repository/conan/open."
+}

@@ -1,0 +1,14 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+ <modelVersion>4.0.0</modelVersion>
+ <parent><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-common-components-formats-parent</artifactId><version>3.96.4-01</version><relativePath/></parent>
+ <artifactId>nexus-repository-docker</artifactId>
+ <dependencies>
+  <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-open-platform</artifactId><version>${project.version}</version><scope>provided</scope></dependency>
+  <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-plugin-api</artifactId><scope>provided</scope></dependency>
+  <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-repository-content</artifactId><scope>provided</scope></dependency>
+  <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-repository-services</artifactId><scope>provided</scope></dependency>
+  <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-repository-httpbridge</artifactId><scope>provided</scope></dependency>
+  <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-spring</artifactId><scope>provided</scope></dependency>
+  <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-rapture</artifactId><scope>provided</scope></dependency>
+ </dependencies>
+</project>

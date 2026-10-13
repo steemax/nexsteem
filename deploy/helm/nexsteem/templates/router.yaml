@@ -1,0 +1,84 @@
+{{- $name := include "nxc.name" . -}}
+{{- $domain := include "nxc.domain" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-router
+data:
+  haproxy.cfg: |
+    global
+      log stdout format raw local0
+      maxconn 500
+    defaults
+      log global
+      mode tcp
+      timeout connect 3s
+      timeout client 1h
+      timeout server 1h
+    resolvers kubernetes
+      parse-resolv-conf
+      hold valid 5s
+      timeout resolve 1s
+      timeout retry 1s
+    frontend postgres_write
+      bind :5432
+      default_backend postgres_primary
+    backend postgres_primary
+      option httpchk GET /primary
+      http-check expect status 200
+      default-server inter 2s fall 2 rise 1 on-marked-down shutdown-sessions
+      {{- range $i := until (int .Values.postgres.replicas) }}
+      server pg{{ $i }} {{ $name }}-postgres-{{ $i }}-0.{{ $name }}-postgres.{{ $domain }}:5432 check port 8008 check-ssl verify required ca-file /run/tls/ca.crt resolvers kubernetes init-addr none
+      {{- end }}
+---
+{{- range $i, $node := .Values.router.nodes }}
+{{- with $ }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}-router-{{ $i }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "nxc.labels" . | nindent 6 }}
+      app.kubernetes.io/component: router
+      nexus.cluster/member: {{ $i | quote }}
+  template:
+    metadata:
+      labels:
+        {{- include "nxc.labels" . | nindent 8 }}
+        app.kubernetes.io/component: router
+        nexus.cluster/member: {{ $i | quote }}
+        nexus.cluster/dc: {{ $node.dc | quote }}
+    spec:
+      {{- include "nxc.commonPod" . | nindent 6 }}
+      automountServiceAccountToken: false
+      nodeSelector:
+        {{- mergeOverwrite (deepCopy .Values.nodeSelector) (default dict $node.nodeSelector) | toYaml | nindent 8 }}
+      securityContext: {runAsUser: 1000, runAsGroup: 1000, fsGroup: 1000}
+      affinity:
+        {{- include "nxc.antiAffinity" (merge (dict "component" "router") .) | nindent 8 }}
+      containers:
+        - name: router
+          image: {{ .Values.router.image | quote }}
+          imagePullPolicy: {{ .Values.router.pullPolicy }}
+          args: [-W, -db, -f, /usr/local/etc/haproxy/haproxy.cfg]
+          ports: [{name: postgres, containerPort: 5432}]
+          readinessProbe: {tcpSocket: {port: 5432}, periodSeconds: 5}
+          livenessProbe: {tcpSocket: {port: 5432}, periodSeconds: 10}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}, readOnlyRootFilesystem: true}
+          resources:
+            {{- .Values.router.resources | toYaml | nindent 12 }}
+          volumeMounts:
+            - {name: config, mountPath: /usr/local/etc/haproxy, readOnly: true}
+            - {name: tls, mountPath: /run/tls, readOnly: true}
+      volumes:
+        - {name: config, configMap: {name: {{ $name }}-router}}
+        - name: tls
+          secret:
+            secretName: {{ include "nxc.tls" . }}
+            items: [{key: postgres-ca.crt, path: ca.crt}]
+{{- end }}
+{{- end }}

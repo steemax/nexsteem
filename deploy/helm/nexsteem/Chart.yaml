@@ -1,0 +1,9 @@
+apiVersion: v2
+name: nexsteem
+description: NexSteem artifact repository with internal blob replication and PostgreSQL failover
+type: application
+version: 0.1.5
+appVersion: 3.96.4-01
+home: https://github.com/steemax/nexsteem
+sources:
+  - https://github.com/steemax/nexsteem

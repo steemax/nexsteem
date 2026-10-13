@@ -1,0 +1,27 @@
+{
+  "realm": "nexus-local-test",
+  "enabled": true,
+  "roles": {"client": {"nexus": [{"name": "reader"}, {"name": "admin-test"}]}},
+  "clients": [{
+    "clientId": "nexus",
+    "enabled": true,
+    "protocol": "openid-connect",
+    "publicClient": false,
+    "secret": "local-integration-test-only",
+    "serviceAccountsEnabled": true,
+    "standardFlowEnabled": false,
+    "directAccessGrantsEnabled": false,
+    "protocolMappers": [{
+      "name": "nexus-audience",
+      "protocol": "openid-connect",
+      "protocolMapper": "oidc-audience-mapper",
+      "config": {"included.client.audience": "nexus", "access.token.claim": "true", "id.token.claim": "false"}
+    }]
+  }],
+  "users": [{
+    "username": "service-account-nexus",
+    "enabled": true,
+    "serviceAccountClientId": "nexus",
+    "clientRoles": {"nexus": ["reader"]}
+  }]
+}

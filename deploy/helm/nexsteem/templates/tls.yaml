@@ -1,0 +1,45 @@
+{{- if not .Values.tls.existingSecret -}}
+{{- $name := include "nxc.tls" . -}}
+{{- $old := lookup "v1" "Secret" .Release.Namespace $name -}}
+{{- $prefix := include "nxc.name" . -}}
+{{- $domain := include "nxc.domain" . -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "nxc.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+type: Opaque
+data:
+  {{- if $old }}
+  {{- $old.data | toYaml | nindent 2 }}
+  {{- else }}
+  {{- range $component := list "etcd" "postgres" "nexus" }}
+  {{- $ca := genCA (printf "%s-%s-ca" $prefix $component) (int $.Values.tls.validityDays) }}
+  {{ $component }}-ca.crt: {{ $ca.Cert | b64enc | quote }}
+  {{- $dns := list "localhost" (printf "%s-%s" $prefix $component) (printf "%s-%s.%s" $prefix $component $domain) (printf "*.%s-%s.%s" $prefix $component $domain) (printf "%s-postgres-rw.%s" $prefix $domain) }}
+  {{- if eq $component "etcd" }}{{ $dns = list "localhost" }}{{ end }}
+  {{- $count := 3 }}
+  {{- if eq $component "postgres" }}{{ $count = int $.Values.postgres.replicas }}{{ end }}
+  {{- if eq $component "nexus" }}{{ $count = int $.Values.nexus.replicas }}{{ end }}
+  {{- range $i := until $count }}
+  {{- $dns = append $dns (printf "%s-%s-%d-0.%s-%s.%s" $prefix $component $i $prefix $component $domain) }}
+  {{- end }}
+  {{- $ips := list "127.0.0.1" }}
+  {{- if eq $component "etcd" }}{{ $ips = list }}{{ end }}
+  {{- $cert := genSignedCert (printf "%s-%s" $prefix $component) $ips $dns (int $.Values.tls.validityDays) $ca }}
+  {{ $component }}.crt: {{ $cert.Cert | b64enc | quote }}
+  {{ $component }}.key: {{ $cert.Key | b64enc | quote }}
+  {{- if eq $component "etcd" }}
+  {{- $client := genSignedCert "" nil (list "patroni-client") (int $.Values.tls.validityDays) $ca }}
+  etcd-client.crt: {{ $client.Cert | b64enc | quote }}
+  etcd-client.key: {{ $client.Key | b64enc | quote }}
+  {{- $proof := genSignedCert "" nil (list "nexus-proof-client") (int $.Values.tls.validityDays) $ca }}
+  etcd-proof.crt: {{ $proof.Cert | b64enc | quote }}
+  etcd-proof.key: {{ $proof.Key | b64enc | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,40 @@
+NexSteem — independent source distribution
+
+Additional implementation, adapters, build integration, branding and project
+documentation: steemax, 2026. This identifies the originator of project additions;
+original copyright notices in imported source files remain unchanged.
+
+Source repository:
+https://github.com/steemax/nexsteem
+
+Corresponding source release for standalone ext3 and Kubernetes k8s10:
+https://github.com/steemax/nexsteem/releases/tag/3.96.4-01-ext3-k8s10
+
+Designated complete source archive:
+https://github.com/steemax/nexsteem/releases/download/3.96.4-01-ext3-k8s10/nexsteem-3.96.4-01-ext3-k8s10-source.tar.gz
+
+These are the designated source publication locations, not a statement that an
+unpublished release is already downloadable. Distributors must make the exact
+corresponding sources, build instructions, licenses and notices available with
+or alongside the binaries. Build provenance identifies the assembled source
+version. The ext2/k8s9 historical images have different corresponding sources.
+
+Sonatype Nexus Repository Core and historical Sonatype format sources:
+Copyright (c) 2008-present Sonatype, Inc.; Eclipse Public License 1.0.
+See LICENSE.txt, licenses/upstream-NOTICE.txt, licenses/upstream-OSS-LICENSE.txt,
+and SOURCE-ORIGIN.json in the imported format modules.
+
+RubyGems/RPM/XML codecs and NuGet version comparison include adaptations from
+kkRepo, commit 9c2b87ca3851a180e929f8139803212846412a9c, Apache License 2.0.
+Their original licenses, source attributions and notices are retained in the
+respective modules. See licenses/Apache-2.0.txt and THIRD-PARTY-NOTICES.md.
+
+Upstream includes notices concerning Sencha Ext JS, GPLv3 and a historical
+Sonatype/Sencha FLOSS exception. Those original notices are preserved verbatim.
+The applicability of that exception to this independent distribution has not
+been established. This NOTICE does not resolve that question, grant a new
+Sencha exception, or relicense third-party components.
+
+Sonatype, Nexus and their logos are trademarks of their respective owners.
+NexSteem is independently maintained and is not an official Sonatype Community
+Edition or Pro distribution, and is not endorsed by Sonatype.

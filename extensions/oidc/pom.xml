@@ -1,0 +1,26 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.sonatype.nexus.common.components</groupId>
+    <artifactId>nexus-common-components-parent</artifactId>
+    <version>3.96.4-01</version>
+    <relativePath/>
+  </parent>
+  <artifactId>nexus-open-oidc</artifactId>
+  <name>Open OAuth 2.0 and OIDC Provider</name>
+  <dependencies>
+    
+    <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-datastore</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-security</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-rapture</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-rest-jackson2</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-test-common</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-base</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-crypto</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-ssl</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-extdirect</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.sonatype.nexus.common.components</groupId><artifactId>nexus-siesta</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>com.nimbusds</groupId><artifactId>nimbus-jose-jwt</artifactId><scope>provided</scope></dependency>
+  </dependencies>
+</project>

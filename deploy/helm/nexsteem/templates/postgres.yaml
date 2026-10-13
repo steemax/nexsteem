@@ -1,0 +1,105 @@
+{{- $name := include "nxc.name" . -}}
+{{- range $i, $node := .Values.postgres.nodes }}
+{{- with $ }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}-postgres-{{ $i }}
+  labels:
+    {{- include "nxc.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: {{ $name }}-postgres
+  podManagementPolicy: Parallel
+  updateStrategy: {type: OnDelete}
+  selector:
+    matchLabels:
+      {{- include "nxc.labels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+      nexus.cluster/member: {{ $i | quote }}
+  template:
+    metadata:
+      labels:
+        {{- include "nxc.labels" . | nindent 8 }}
+        app.kubernetes.io/component: postgres
+        nexus.cluster/member: {{ $i | quote }}
+        nexus.cluster/dc: {{ $node.dc | quote }}
+    spec:
+      {{- include "nxc.commonPod" . | nindent 6 }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 10
+      securityContext: {runAsUser: 999, runAsGroup: 999, fsGroup: 999}
+      nodeSelector:
+        {{- mergeOverwrite (deepCopy .Values.nodeSelector) (default dict $node.nodeSelector) | toYaml | nindent 8 }}
+      affinity:
+        {{- include "nxc.antiAffinity" (merge (dict "component" "postgres") .) | nindent 8 }}
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image | quote }}
+          imagePullPolicy: {{ .Values.postgres.pullPolicy }}
+          env:
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - {name: PG_HEADLESS, value: {{ printf "%s-postgres.%s" $name (include "nxc.domain" .) | quote }}}
+            - {name: PG_DC, value: {{ $node.dc | quote }}}
+          ports:
+            - {name: postgres, containerPort: 5432}
+            - {name: patroni, containerPort: 8008}
+          startupProbe:
+            exec: {command: [/opt/patroni/bin/python, /opt/nexus-postgres/probe.py, health]}
+            periodSeconds: 5
+            failureThreshold: 120
+            timeoutSeconds: 4
+          readinessProbe:
+            exec: {command: [/opt/patroni/bin/python, /opt/nexus-postgres/probe.py, health]}
+            periodSeconds: 5
+            timeoutSeconds: 4
+          livenessProbe:
+            exec: {command: [/opt/patroni/bin/python, /opt/nexus-postgres/probe.py, liveness]}
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 4
+          resources:
+            {{- .Values.postgres.resources | toYaml | nindent 12 }}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}, readOnlyRootFilesystem: true}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql/data}
+            - {name: config, mountPath: /etc/nexus-postgres, readOnly: true}
+            - {name: secrets, mountPath: /run/nexus-postgres/secrets, readOnly: true}
+            - {name: tls, mountPath: /run/nexus-postgres/tls, readOnly: true}
+            - {name: etcd-tls, mountPath: /run/nexus-postgres/etcd, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+            - {name: run, mountPath: /var/run/postgresql}
+      volumes:
+        - {name: config, configMap: {name: {{ $name }}-postgres}}
+        - {name: tmp, emptyDir: {medium: Memory}}
+        - {name: run, emptyDir: {medium: Memory}}
+        - name: secrets
+          secret:
+            secretName: {{ include "nxc.secret" . }}
+            defaultMode: 0440
+            items:
+              {{- range $key := list "postgres-password" "replication-password" "rewind-password" "patroni-password" "nexus-password" "control-password" "etcd-patroni-password" }}
+              - {key: {{ $key }}, path: {{ $key }}}
+              {{- end }}
+        {{- range $component := list "postgres" "etcd" }}
+        - name: {{ if eq $component "postgres" }}tls{{ else }}etcd-tls{{ end }}
+          secret:
+            secretName: {{ include "nxc.tls" $ }}
+            defaultMode: 0440
+            items:
+              - {key: {{ $component }}-ca.crt, path: ca.crt}
+              - {key: {{ if eq $component "etcd" }}etcd-client{{ else }}postgres{{ end }}.crt, path: tls.crt}
+              - {key: {{ if eq $component "etcd" }}etcd-client{{ else }}postgres{{ end }}.key, path: tls.key}
+        {{- end }}
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- if .Values.postgres.storageClass }}
+        storageClassName: {{ .Values.postgres.storageClass | quote }}
+        {{- end }}
+        resources: {requests: {storage: {{ .Values.postgres.storageSize }}}}
+{{- end }}
+{{- end }}

@@ -1,0 +1,23 @@
+{{- if and .Values.nexus.enabled .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "nxc.name" . }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className | quote }}
+  {{- end }}
+  tls:
+    - hosts: [{{ required "ingress.hostname is required" .Values.ingress.hostname | quote }}]
+      secretName: {{ required "ingress.tlsSecret is required" .Values.ingress.tlsSecret }}
+  rules:
+    - host: {{ .Values.ingress.hostname | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "nxc.name" . }}-writer
+                port: {number: {{ .Values.service.port }}}
+{{- end }}

@@ -1,0 +1,53 @@
+#!/bin/sh
+set -eu
+NEXUS_HOME=${NEXUS_HOME:-/opt/nexus}
+NEXUS_DATA=${NEXUS_DATA:-/var/lib/nexus}
+JAVA_HOME=${JAVA_HOME:-/opt/nexus-java}
+NEXUS_JAVA_OPTS=${NEXUS_JAVA_OPTS:--Xms512m -Xmx2g -XX:MaxDirectMemorySize=2g}
+test -d "$NEXUS_DATA" || { echo "Нет каталога данных: $NEXUS_DATA" >&2; exit 1; }
+test -w "$NEXUS_DATA" || { echo "Каталог данных не доступен для записи: $NEXUS_DATA" >&2; exit 1; }
+# Hold the kernel advisory lock for the entire JVM lifetime, including before
+# initializing its encryption key. Cross-DC fencing remains a separate duty.
+exec 9>"$NEXUS_DATA/.nexus-writer.lock"
+flock -n 9 || { echo 'Другой Nexus уже владеет этим каталогом данных' >&2; exit 1; }
+cd "$NEXUS_HOME"
+# Exactly one application jar, including after upgrades.
+set -- "$NEXUS_HOME"/bin/nexus-repository-core-*.jar
+test "$#" -eq 1 && test -f "$1" || { echo "Нет единственного Core jar" >&2; exit 1; }
+nexus_jar=$1
+nexus_ui_key=$(cat "$NEXUS_HOME/webresources-cache-key" 2>/dev/null || sha256sum "$nexus_jar" | cut -d ' ' -f 1)
+case "$nexus_ui_key" in *[!0-9a-f]*|'') echo 'Некорректный ключ кэша UI' >&2; exit 1;; esac
+test "${#nexus_ui_key}" -eq 64 || { echo 'Некорректный ключ кэша UI' >&2; exit 1; }
+set -- "-Dkaraf.base=$NEXUS_HOME" "-Dkaraf.data=$NEXUS_DATA" "-Dnexus.webresources.cachebuster=$nexus_ui_key"
+if [ -n "${NEXUS_SECRETS_KEY_FILE:-}" ]; then
+  set -- "$@" "-Dnexus.secrets.file=$NEXUS_SECRETS_KEY_FILE"
+else
+  case " $NEXUS_JAVA_OPTS " in
+    *' -Dnexus.secrets.file='*) ;;
+    *)
+      if ! grep -Eq '^[[:space:]]*nexus\.secrets\.file([[:space:]=:]|$)' "$NEXUS_DATA/etc/nexus.properties" 2>/dev/null; then
+        nexus_key_dir="$NEXUS_DATA/keystores/secretkeys"
+        nexus_key_file="$nexus_key_dir/encryption-key.json"
+        mkdir -p "$nexus_key_dir"
+        if [ ! -f "$nexus_key_file" ]; then
+          # A unique key per data volume; retained across container/package upgrades.
+          umask 077
+          nexus_key=$(openssl rand -hex 32)
+          nexus_key_tmp=$(mktemp "$nexus_key_dir/.key.XXXXXX")
+          printf '{"active":"nexus-open","keys":[{"id":"nexus-open","key":"%s"}]}\n' "$nexus_key" > "$nexus_key_tmp"
+          mv "$nexus_key_tmp" "$nexus_key_file"
+          unset nexus_key
+        fi
+        # Persist the path with the volume so older compatible launchers can also
+        # decrypt secrets after a package rollback. Explicit operator settings
+        # above always take precedence.
+        mkdir -p "$NEXUS_DATA/etc"
+        printf '\nnexus.secrets.file=%s\n' "$nexus_key_file" >> "$NEXUS_DATA/etc/nexus.properties"
+        set -- "$@" "-Dnexus.secrets.file=$nexus_key_file"
+      fi
+      ;;
+  esac
+fi
+# JVM options are an operator-owned list of arguments. No eval or shell expansion.
+# shellcheck disable=SC2086
+exec "$JAVA_HOME/bin/java" $NEXUS_JAVA_OPTS "$@" -jar "$nexus_jar"

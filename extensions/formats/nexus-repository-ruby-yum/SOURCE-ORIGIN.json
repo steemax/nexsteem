@@ -1,0 +1,18 @@
+{
+  "source": "https://github.com/klboke/kkrepo",
+  "commit": "9c2b87ca3851a180e929f8139803212846412a9c",
+  "license": "Apache-2.0",
+  "adapted_files": [
+    "RubygemsCodec.java (from RubygemsService.java pure codecs)",
+    "RpmMetadata.java",
+    "RpmMetadataParser.java",
+    "YumCodec.java (from YumService.java pure XML codecs)"
+  ],
+  "storage": "Nexus SQL ContentFacet + BlobStore",
+  "original_adapted_files": [
+    "RubygemsService.java pure codecs only",
+    "RpmMetadata.java",
+    "RpmMetadataParser.java",
+    "YumService.java pure XML codecs only"
+  ]
+}

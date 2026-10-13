@@ -1,0 +1,12 @@
+# Ephemeral Keycloak realm for automated tests. Fixed secret is test-only.
+services:
+  keycloak-test:
+    image: quay.io/keycloak/keycloak:26.5.2
+    platform: linux/amd64
+    command: [start-dev, --import-realm]
+    environment:
+      KC_HOSTNAME: http://keycloak-test:8080
+    ports:
+      - "127.0.0.1:18080:8080"
+    volumes:
+      - ../tests/fixtures/keycloak-realm.json:/opt/keycloak/data/import/realm.json:ro

@@ -1,0 +1,18 @@
+NexSteem PostgreSQL / Patroni container integration
+
+Container integration, bootstrap, synchronization policy and health-check scripts:
+Copyright (c) 2026 steemax. Eclipse Public License 1.0; see LICENSE.txt.
+
+PostgreSQL is supplied by the pinned official postgres container image.
+PostgreSQL copyright and licensing records remain in /usr/share/doc, with a copy
+of postgresql-17/copyright in ../components/PostgreSQL-copyright.txt.
+
+Patroni 4.1.5: Copyright (c) 2025 Compose, Zalando SE, Patroni Contributors.
+MIT License; the complete notice and license are included in licenses/Patroni-MIT.txt.
+
+Installed Python dependencies retain their dist-info license metadata in
+/opt/patroni/lib/python*/site-packages. Component terms continue to apply.
+See THIRD-PARTY-NOTICES.md and SOURCE-INFO.txt for source retrieval instructions.
+
+This is independent NexSteem container integration, not an official Sonatype,
+PostgreSQL or Patroni distribution, and it is not endorsed by those projects.

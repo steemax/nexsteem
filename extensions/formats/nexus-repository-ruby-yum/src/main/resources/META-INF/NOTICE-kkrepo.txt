@@ -1,0 +1,1 @@
+Pure RubyGems Marshal/YAML codecs and RPM/repository XML codecs adapted from kkRepo, https://github.com/klboke/kkrepo, commit 9c2b87ca3851a180e929f8139803212846412a9c, Apache License 2.0. Original backend/persistence code is not included. Nexus storage, authentication, permission checks and repository routing remain Nexus Core APIs.

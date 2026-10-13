@@ -1,0 +1,71 @@
+# Fresh install: Helm release nexus, namespace nexus.
+# Replace registry/hostnames. If using CSI, replace geo-local in all three sections.
+clusterDomain: cluster.local
+nodeSelector: {kubernetes.io/arch: amd64}
+imagePullSecrets: [] # For a private registry: [{name: registry-pull}]
+placement:
+  requiredAntiAffinity: true
+  topologyKey: kubernetes.io/hostname
+# Allows the witness etcd Pod on a control-plane node when that node is labelled witness.
+tolerations:
+  - {key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}
+nexus:
+  resources:
+    requests: {cpu: "1", memory: 2Gi}
+    limits: {cpu: "4", memory: 4Gi}
+  image: steemax/nexsteem:3.96.4-01-cluster-k8s10
+  replicas: 2
+  requiredCopies: 2
+  storageClass: ""
+  storageSize: 20Gi
+  nodes:
+    - {dc: dc1, nodeSelector: {nexus.cluster/dc: dc1}}
+    - {dc: dc2, nodeSelector: {nexus.cluster/dc: dc2}}
+postgres:
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "2", memory: 1Gi}
+  image: steemax/nexsteem:postgres-17-patroni4.1.5-r3-amd64
+  replicas: 3
+  storageClass: ""
+  storageSize: 10Gi
+  allowDegradedLocalWrites: true
+  nodes:
+    - {dc: dc1, nodeSelector: {nexus.cluster/dc: dc1}}
+    - {dc: dc2, nodeSelector: {nexus.cluster/dc: dc2}}
+    - {dc: dc2, nodeSelector: {nexus.cluster/dc: dc2}}
+etcd:
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: "1", memory: 512Mi}
+  replicas: 3
+  storageClass: ""
+  storageSize: 2Gi
+  nodes:
+    - {dc: dc1, nodeSelector: {nexus.cluster/dc: dc1}}
+    - {dc: dc2, nodeSelector: {nexus.cluster/dc: dc2}}
+    - {dc: witness, nodeSelector: {nexus.cluster/dc: witness}}
+router:
+  resources:
+    requests: {cpu: 50m, memory: 32Mi}
+    limits: {cpu: 500m, memory: 128Mi}
+  replicas: 2
+  nodes:
+    - {dc: dc1, nodeSelector: {nexus.cluster/dc: dc1}}
+    - {dc: dc2, nodeSelector: {nexus.cluster/dc: dc2}}
+service:
+  type: ClusterIP
+  dockerPorts:
+    - {port: 8090, corePort: 8090}
+networkPolicy:
+  enabled: true
+  clientNamespaceSelector:
+    matchExpressions:
+      # Nexus peers forward HTTP/registry requests to the active Core.
+      # The Nexus namespace must be allowed along with the ingress namespace.
+      - {key: kubernetes.io/metadata.name, operator: In, values: [nexus, traefik-system]}
+ingress:
+  enabled: true
+  className: traefik
+  hostname: nexus.example.org
+  tlsSecret: nexus-public-tls

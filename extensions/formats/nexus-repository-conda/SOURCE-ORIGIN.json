@@ -1,0 +1,8 @@
+{
+  "artifact": "nexus-repository-conda-3.31.1-01-sources.jar",
+  "sha256": "589bafbf99ec26dd664c388aed82596a2c8ce00ecd357e08774d6a31b52d413e",
+  "license": "EPL-1.0",
+  "source": "https://repo.maven.apache.org/maven2/org/sonatype/nexus/plugins/nexus-repository-conda/3.31.1-01/nexus-repository-conda-3.31.1-01-sources.jar",
+  "source_version": "3.31.1-01",
+  "upstream_core_version": "3.96.4-01"
+}

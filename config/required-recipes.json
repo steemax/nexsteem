@@ -1,0 +1,100 @@
+{
+  "source": "Public repository protocol matrix: 22 formats / 51 hosted, proxy and group recipes",
+  "formats": {
+    "apt": [
+      "hosted",
+      "proxy"
+    ],
+    "cargo": [
+      "group",
+      "hosted",
+      "proxy"
+    ],
+    "cocoapods": [
+      "proxy"
+    ],
+    "composer": [
+      "proxy"
+    ],
+    "conan": [
+      "group",
+      "hosted",
+      "proxy"
+    ],
+    "conda": [
+      "proxy"
+    ],
+    "docker": [
+      "group",
+      "hosted",
+      "proxy"
+    ],
+    "gitlfs": [
+      "hosted"
+    ],
+    "go": [
+      "group",
+      "proxy"
+    ],
+    "helm": [
+      "hosted",
+      "proxy"
+    ],
+    "huggingface": [
+      "proxy"
+    ],
+    "maven2": [
+      "group",
+      "hosted",
+      "proxy"
+    ],
+    "npm": [
+      "group",
+      "hosted",
+      "proxy"
+    ],
+    "nuget": [
+      "group",
+      "hosted",
+      "proxy"
+    ],
+    "p2": [
+      "proxy"
+    ],
+    "pypi": [
+      "group",
+      "hosted",
+      "proxy"
+    ],
+    "r": [
+      "group",
+      "hosted",
+      "proxy"
+    ],
+    "raw": [
+      "group",
+      "hosted",
+      "proxy"
+    ],
+    "rubygems": [
+      "group",
+      "hosted",
+      "proxy"
+    ],
+    "swift": [
+      "group",
+      "hosted",
+      "proxy"
+    ],
+    "terraform": [
+      "group",
+      "hosted",
+      "proxy"
+    ],
+    "yum": [
+      "group",
+      "hosted",
+      "proxy"
+    ]
+  }
+}

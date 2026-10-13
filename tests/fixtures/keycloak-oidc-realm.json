@@ -1,0 +1,95 @@
+{
+  "realm": "nexus-open-oidc-test",
+  "enabled": true,
+  "roles": {
+    "client": {
+      "nexus": [
+        {
+          "name": "reader"
+        },
+        {
+          "name": "admin-test"
+        }
+      ]
+    }
+  },
+  "clients": [
+    {
+      "clientId": "nexus",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "local-integration-test-only",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "nexus-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "nexus",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "nexus-client-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "config": {
+            "usermodel.clientRoleMapping.clientId": "nexus",
+            "claim.name": "resource_access.nexus.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "true"
+          }
+        }
+      ],
+      "redirectUris": [
+        "http://localhost:8081/oidc/callback",
+        "http://localhost:18084/oidc/callback",
+        "http://127.0.0.1:18084/oidc/callback"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8081/##http://localhost:18084/##http://127.0.0.1:18084/"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-nexus",
+      "enabled": true,
+      "serviceAccountClientId": "nexus",
+      "clientRoles": {
+        "nexus": [
+          "reader"
+        ]
+      }
+    },
+    {
+      "username": "reader",
+      "enabled": true,
+      "email": "reader@example.org",
+      "firstName": "Test",
+      "lastName": "Reader",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "nexus-reader-local-only",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "nexus": [
+          "reader"
+        ]
+      }
+    }
+  ],
+  "accessTokenLifespan": 30
+}

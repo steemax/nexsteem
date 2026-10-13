@@ -1,0 +1,106 @@
+# Three independent failure domains are needed to survive any one node loss.
+clusterDomain: cluster.local
+nodeSelector: {kubernetes.io/arch: amd64}
+imagePullSecrets: []
+tolerations: []
+placement:
+  requiredAntiAffinity: true
+  topologyKey: kubernetes.io/hostname
+secrets:
+  # A pre-existing Secret must contain every key in templates/secrets.yaml.
+  # Generated installation secrets are retained by Helm and reused on upgrade.
+  existingSecret: ""
+tls:
+  existingSecret: ""
+  validityDays: 365
+etcd:
+  replicas: 3
+  nodes:
+    - {dc: dc1, nodeSelector: {nexus.cluster/dc: dc1}}
+    - {dc: dc2, nodeSelector: {nexus.cluster/dc: dc2}}
+    - {dc: witness, nodeSelector: {nexus.cluster/dc: witness}}
+  image: gcr.io/etcd-development/etcd:v3.6.14@sha256:a491baeaa0cb0c9cd89c0062ac44ece53886e3e5bddad18d2daf36678ce665b6
+  pullPolicy: IfNotPresent
+  storageClass: ""
+  storageSize: 2Gi
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: "1", memory: 512Mi}
+postgres:
+  replicas: 3
+  nodes:
+    - {dc: dc1, nodeSelector: {nexus.cluster/dc: dc1}}
+    - {dc: dc2, nodeSelector: {nexus.cluster/dc: dc2}}
+    - {dc: dc2, nodeSelector: {nexus.cluster/dc: dc2}}
+  allowDegradedLocalWrites: true
+  image: steemax/nexsteem:postgres-17-patroni4.1.5-r3-amd64
+  pullPolicy: IfNotPresent
+  storageClass: ""
+  storageSize: 20Gi
+  ttl: 30
+  loopWait: 5
+  retryTimeout: 5
+  resources:
+    requests: {cpu: 250m, memory: 256Mi}
+    limits: {cpu: "2", memory: 1Gi}
+router:
+  replicas: 2
+  nodes:
+    - {dc: dc1, nodeSelector: {nexus.cluster/dc: dc1}}
+    - {dc: dc2, nodeSelector: {nexus.cluster/dc: dc2}}
+  image: haproxy:3.2-alpine@sha256:5d97434a423c2533cfeb42874d45cf6d69a840b60334582dfbfd5008e94c80be
+  pullPolicy: IfNotPresent
+  resources:
+    requests: {cpu: 50m, memory: 32Mi}
+    limits: {cpu: 500m, memory: 128Mi}
+nexus:
+  enabled: true
+  replicas: 3
+  nodes:
+    - {dc: dc1, nodeSelector: {nexus.cluster/dc: dc1}}
+    - {dc: dc2, nodeSelector: {nexus.cluster/dc: dc2}}
+    - {dc: dc2, nodeSelector: {nexus.cluster/dc: dc2}}
+  requiredCopies: 2
+  image: steemax/nexsteem:3.96.4-01-cluster-k8s10
+  pullPolicy: IfNotPresent
+  storageClass: ""
+  storageSize: 100Gi
+  javaOpts: -Xms256m -Xmx2g -XX:MaxDirectMemorySize=1g
+  # Resources for the prepare-private-keystores init container in each Nexus Pod.
+  initResources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 500m, memory: 128Mi}
+  http:
+    proxyRequests: 32
+    controlRequests: 4
+    maxConnections: 128
+    maxHeaderBytes: 32768
+    maxRequestSeconds: 3600
+    maxResponseSeconds: 3600
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "4", memory: 4Gi}
+jobs:
+  etcdAuth:
+    resources:
+      requests: {cpu: 50m, memory: 64Mi}
+      limits: {cpu: 500m, memory: 128Mi}
+  schemaUpgrade:
+    resources:
+      requests: {cpu: 50m, memory: 64Mi}
+      limits: {cpu: "1", memory: 256Mi}
+service:
+  type: ClusterIP
+  port: 8081
+  nodePort: null
+  dockerPorts: []
+  # Example: [{port: 8090, corePort: 8090}]. Configure Nexus connector 8090.
+networkPolicy:
+  enabled: true
+  # Select trusted client namespaces allowed to reach the Nexus API.
+  clientNamespaceSelector: {}
+ingress:
+  enabled: false
+  className: ""
+  hostname: ""
+  tlsSecret: ""

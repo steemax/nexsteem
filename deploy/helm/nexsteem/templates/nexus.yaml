@@ -1,0 +1,173 @@
+{{- if .Values.nexus.enabled }}
+{{- $name := include "nxc.name" . -}}
+{{- $domain := include "nxc.domain" . -}}
+{{- $peers := dict }}
+{{- range $i, $node := .Values.nexus.nodes }}
+{{- $_ := set $peers (printf "%s-nexus-%d-0" $name $i) (dict "url" (printf "https://%s-nexus-%d-0.%s-nexus.%s:8095" $name $i $name $domain) "dc" $node.dc) }}
+{{- end }}
+{{- $etcd := list (printf "https://%s-etcd-0-0.%s-etcd.%s:2379" $name $name $domain) (printf "https://%s-etcd-1-0.%s-etcd.%s:2379" $name $name $domain) (printf "https://%s-etcd-2-0.%s-etcd.%s:2379" $name $name $domain) }}
+{{- $jdbc := printf "jdbc:postgresql://%s-postgres-rw.%s:5432/nexus?targetServerType=primary&sslmode=verify-full&sslrootcert=/run/nexus-cluster-tls/postgres-ca.crt" $name $domain }}
+{{- $docker := list }}
+{{- range .Values.service.dockerPorts }}{{ $docker = append $docker (printf "%v:%v" .port .corePort) }}{{ end }}
+{{- range $i, $node := .Values.nexus.nodes }}
+{{- with $ }}
+{{- $image := default .Values.nexus.image $node.image }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}-nexus-{{ $i }}
+  labels:
+    {{- include "nxc.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: {{ $name }}-nexus
+  podManagementPolicy: Parallel
+  updateStrategy: {type: OnDelete}
+  selector:
+    matchLabels:
+      {{- include "nxc.labels" . | nindent 6 }}
+      app.kubernetes.io/component: nexus
+      nexus.cluster/member: {{ $i | quote }}
+  template:
+    metadata:
+      labels:
+        {{- include "nxc.labels" . | nindent 8 }}
+        app.kubernetes.io/component: nexus
+        nexus.cluster/member: {{ $i | quote }}
+        nexus.cluster/dc: {{ $node.dc | quote }}
+    spec:
+      {{- include "nxc.commonPod" . | nindent 6 }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 45
+      securityContext: {runAsNonRoot: true, runAsUser: 200, runAsGroup: 200, fsGroup: 200}
+      nodeSelector:
+        {{- mergeOverwrite (deepCopy .Values.nodeSelector) (default dict $node.nodeSelector) | toYaml | nindent 8 }}
+      affinity:
+        {{- include "nxc.antiAffinity" (merge (dict "component" "nexus") .) | nindent 8 }}
+      initContainers:
+        - name: prepare-private-keystores
+          image: {{ $image | quote }}
+          imagePullPolicy: {{ .Values.nexus.pullPolicy }}
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              umask 077
+              openssl pkcs12 -export -inkey /run/tls/nexus.key -in /run/tls/nexus.crt -certfile /run/tls/nexus-ca.crt -name replica -out /run/private/replica.p12 -passout file:/run/secrets/tls-password
+              openssl pkcs12 -export -inkey /run/tls/etcd-proof.key -in /run/tls/etcd-proof.crt -certfile /run/tls/etcd-ca.crt -name authority -out /run/private/authority.p12 -passout file:/run/secrets/tls-password
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}, readOnlyRootFilesystem: true}
+          resources:
+            {{- .Values.nexus.initResources | default (dict "requests" (dict "cpu" "50m" "memory" "64Mi") "limits" (dict "cpu" "500m" "memory" "128Mi")) | toYaml | nindent 12 }}
+          volumeMounts:
+            - {name: tls, mountPath: /run/tls, readOnly: true}
+            - {name: secrets, mountPath: /run/secrets, readOnly: true}
+            - {name: private-keystores, mountPath: /run/private}
+      containers:
+        - name: nexus
+          image: {{ $image | quote }}
+          imagePullPolicy: {{ .Values.nexus.pullPolicy }}
+          command: [/usr/local/bin/nexus-cluster-launch]
+          env:
+            - {name: NX_CLUSTER_ID, value: {{ $name | quote }}}
+            - name: NX_CLUSTER_NODE_ID
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - name: NX_CLUSTER_POD_UID
+              valueFrom: {fieldRef: {fieldPath: metadata.uid}}
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - name: NX_CLUSTER_PUBLIC_BIND_ADDRESS
+              valueFrom: {fieldRef: {fieldPath: status.podIP}}
+            - {name: NX_CLUSTER_NODE_URL, value: {{ printf "http://$(POD_NAME).%s-nexus.%s:8081" $name $domain | quote }}}
+            - {name: NX_CLUSTER_PEERS_JSON, value: {{ $peers | toJson | quote }}}
+            - {name: NX_CLUSTER_ROOT, value: /var/lib/nexus/cluster-blobs}
+            - {name: NX_CLUSTER_NODE_BASEDIR, value: /var/lib/nexus/cluster}
+            - {name: NX_CLUSTER_REQUIRED_COPIES, value: "2"}
+            - {name: NX_CLUSTER_ALLOW_DEGRADED, value: {{ .Values.postgres.allowDegradedLocalWrites | toString | quote }}}
+            - {name: NX_CLUSTER_SECRET_FILE, value: /run/nexus-cluster-secrets/replication.key}
+            - {name: NX_CLUSTER_TLS_KEYSTORE_FILE, value: /run/nexus-cluster-private/replica.p12}
+            - {name: NX_CLUSTER_TLS_PASSWORD_FILE, value: /run/nexus-cluster-secrets/tls-password}
+            - {name: NX_CLUSTER_TLS_CA_FILE, value: /run/nexus-cluster-tls/nexus-ca.crt}
+            - {name: NX_CLUSTER_SQL_URL, value: {{ $jdbc | quote }}}
+            - {name: NX_CLUSTER_SQL_USER, value: nexus}
+            - {name: NX_CLUSTER_SQL_PASSWORD_FILE, value: /run/nexus-cluster-secrets/nexus-password}
+            - {name: NX_CLUSTER_CONTROL_USER, value: nxcontrol}
+            - {name: NX_CLUSTER_CONTROL_PASSWORD_FILE, value: /run/nexus-cluster-secrets/control-password}
+            - {name: NX_CLUSTER_ETCD_ENDPOINTS, value: {{ $etcd | toJson | quote }}}
+            - {name: NX_CLUSTER_ETCD_SCOPE, value: {{ printf "/nexus-pg/%s/" $name | quote }}}
+            - {name: NX_CLUSTER_ETCD_USER, value: nx-proof}
+            - {name: NX_CLUSTER_ETCD_PASSWORD_FILE, value: /run/nexus-cluster-secrets/etcd-proof-password}
+            - {name: NX_CLUSTER_ETCD_CA_FILE, value: /run/nexus-cluster-tls/etcd-ca.crt}
+            - {name: NX_CLUSTER_ETCD_TLS_KEYSTORE_FILE, value: /run/nexus-cluster-private/authority.p12}
+            - {name: NX_CLUSTER_ETCD_TLS_PASSWORD_FILE, value: /run/nexus-cluster-secrets/tls-password}
+            - {name: NX_CLUSTER_DOCKER_PORTS, value: {{ join "," $docker | quote }}}
+            - {name: NX_CLUSTER_MAX_PROXY_REQUESTS, value: {{ .Values.nexus.http.proxyRequests | toString | quote }}}
+            - {name: NX_CLUSTER_MAX_CONTROL_REQUESTS, value: {{ .Values.nexus.http.controlRequests | toString | quote }}}
+            - {name: NX_CLUSTER_HTTP_MAX_CONNECTIONS, value: {{ .Values.nexus.http.maxConnections | toString | quote }}}
+            - {name: NX_CLUSTER_HTTP_MAX_HEADER_BYTES, value: {{ .Values.nexus.http.maxHeaderBytes | toString | quote }}}
+            - {name: NX_CLUSTER_HTTP_MAX_REQUEST_SECONDS, value: {{ .Values.nexus.http.maxRequestSeconds | toString | quote }}}
+            - {name: NX_CLUSTER_HTTP_MAX_RESPONSE_SECONDS, value: {{ .Values.nexus.http.maxResponseSeconds | toString | quote }}}
+            - {name: NEXUS_SECRETS_KEY_FILE, value: /run/nexus-cluster-secrets/encryption-key.json}
+            - {name: NEXUS_JAVA_OPTS, value: {{ printf "%s -Dnexus.datastore.nexus.jdbcUrl=%s -Dnexus.datastore.nexus.username=nexus -Dnexus.datastore.nexus.password-file=/run/nexus-cluster-secrets/nexus-password -Dnexus.datastore.nexus.maximumPoolSize=25 -Dnexus.datastore.nexus.minimumIdle=3" .Values.nexus.javaOpts $jdbc | quote }}}
+          ports:
+            - {name: http, containerPort: 8081}
+            - {name: replica, containerPort: 8095}
+            {{- range .Values.service.dockerPorts }}
+            - {name: docker-{{ .port }}, containerPort: {{ .port }}}
+            {{- end }}
+          startupProbe:
+            httpGet: {path: /_cluster/health/member, port: 8081}
+            periodSeconds: 5
+            timeoutSeconds: 7
+            failureThreshold: 120
+          readinessProbe:
+            # Every ready frontend routes through the current fenced writer.
+            httpGet: {path: /_cluster/health/member, port: 8081}
+            periodSeconds: 3
+            timeoutSeconds: 7
+            failureThreshold: 1
+          livenessProbe:
+            tcpSocket: {port: 8081}
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          resources:
+            {{- .Values.nexus.resources | toYaml | nindent 12 }}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/nexus}
+            # Ehcache uses java.io.tmpdir. Keep its cache private to the Pod
+            # and writable by UID/GID 200, independently of image /tmp permissions.
+            - {name: tmp, mountPath: /tmp}
+            - {name: secrets, mountPath: /run/nexus-cluster-secrets, readOnly: true}
+            - {name: tls, mountPath: /run/nexus-cluster-tls, readOnly: true}
+            - {name: private-keystores, mountPath: /run/nexus-cluster-private, readOnly: true}
+      volumes:
+        - {name: tmp, emptyDir: {}}
+        - {name: private-keystores, emptyDir: {medium: Memory}}
+        - name: secrets
+          secret:
+            secretName: {{ include "nxc.secret" . }}
+            defaultMode: 0440
+            items:
+              {{- range $key := list "nexus-password" "control-password" "replication.key" "tls-password" "encryption-key.json" "etcd-proof-password" }}
+              - {key: {{ $key }}, path: {{ $key }}}
+              {{- end }}
+        - name: tls
+          secret:
+            secretName: {{ include "nxc.tls" . }}
+            defaultMode: 0440
+            items:
+              {{- range $key := list "nexus-ca.crt" "nexus.crt" "nexus.key" "postgres-ca.crt" "etcd-ca.crt" "etcd-proof.crt" "etcd-proof.key" }}
+              - {key: {{ $key }}, path: {{ $key }}}
+              {{- end }}
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- if .Values.nexus.storageClass }}
+        storageClassName: {{ .Values.nexus.storageClass | quote }}
+        {{- end }}
+        resources: {requests: {storage: {{ .Values.nexus.storageSize }}}}
+{{- end }}
+{{- end }}
+{{- end }}

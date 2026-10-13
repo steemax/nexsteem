@@ -1,0 +1,26 @@
+{{- if ne (int .Values.etcd.replicas) 3 }}{{ fail "etcd requires exactly three quorum members" }}{{ end -}}
+{{- if ne (int .Values.router.replicas) 2 }}{{ fail "The PostgreSQL write routers require two nodes" }}{{ end -}}
+{{- if ne (len .Values.router.nodes) 2 }}{{ fail "router.nodes must contain two placement entries" }}{{ end -}}
+{{- $routerDCs := dict }}
+{{- range .Values.router.nodes }}{{ $_ := set $routerDCs .dc true }}{{ end }}
+{{- if lt (len $routerDCs) 2 }}{{ fail "PostgreSQL write routers must span two DCs" }}{{ end -}}
+{{- if lt (int .Values.postgres.replicas) 3 }}{{ fail "PostgreSQL requires at least three nodes for writes after one node failure" }}{{ end -}}
+{{- $etcdDCs := dict }}
+{{- range .Values.etcd.nodes }}{{ $_ := set $etcdDCs .dc true }}{{ end }}
+{{- if ne (len $etcdDCs) 3 }}{{ fail "Etcd quorum members must span three independent failure domains" }}{{ end -}}
+{{- $pgDCs := dict }}
+{{- range .Values.postgres.nodes }}{{ $_ := set $pgDCs .dc true }}{{ end }}
+{{- if lt (len $pgDCs) 2 }}{{ fail "PostgreSQL nodes must span at least two DCs" }}{{ end -}}
+{{- if and .Values.nexus.enabled (lt (int .Values.nexus.replicas) 2) }}{{ fail "Nexus requires at least two replicas" }}{{ end -}}
+{{- $nexusDCs := dict }}
+{{- range .Values.nexus.nodes }}{{ $_ := set $nexusDCs .dc true }}{{ end }}
+{{- if and .Values.nexus.enabled (lt (len $nexusDCs) 2) }}{{ fail "Nexus nodes must span at least two DCs" }}{{ end -}}
+{{- if ne (int .Values.nexus.requiredCopies) 2 }}{{ fail "This profile requires two durable blob copies before acknowledgement" }}{{ end -}}
+{{- range $component := list "etcd" "postgres" "nexus" }}
+{{- $config := index $.Values $component }}
+{{- if ne (len $config.nodes) (int $config.replicas) }}{{ fail (printf "%s.nodes count must equal replicas" $component) }}{{ end -}}
+{{- range $node := $config.nodes }}
+{{- if not $node.dc }}{{ fail (printf "%s node requires dc" $component) }}{{ end -}}
+{{- end }}
+{{- end }}
+{{- if gt (add (int .Values.postgres.loopWait) (mul 2 (int .Values.postgres.retryTimeout))) (int .Values.postgres.ttl) }}{{ fail "Patroni loopWait + 2*retryTimeout must not exceed ttl" }}{{ end -}}

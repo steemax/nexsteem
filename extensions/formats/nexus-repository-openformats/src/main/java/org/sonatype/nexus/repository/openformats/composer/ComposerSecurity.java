@@ -1,0 +1,3 @@
+/* SPDX-License-Identifier: EPL-1.0 */
+package org.sonatype.nexus.repository.openformats.composer;
+@org.springframework.stereotype.Component @org.springframework.context.annotation.Scope("prototype") @org.springframework.beans.factory.annotation.Qualifier("composer") public class ComposerSecurity extends org.sonatype.nexus.repository.openformats.OpenSecurityFacet { public ComposerSecurity(ComposerSecurityContributor contributor,@org.springframework.beans.factory.annotation.Qualifier("simple") org.sonatype.nexus.repository.security.VariableResolverAdapter resolver,org.sonatype.nexus.repository.security.ContentPermissionChecker checker) { super(contributor,resolver,checker); } }

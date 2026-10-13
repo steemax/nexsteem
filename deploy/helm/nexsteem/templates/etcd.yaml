@@ -1,0 +1,100 @@
+{{- $name := include "nxc.name" . -}}
+{{- $domain := include "nxc.domain" . -}}
+{{- range $i, $node := .Values.etcd.nodes }}
+{{- with $ }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}-etcd-{{ $i }}
+  labels:
+    {{- include "nxc.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: {{ $name }}-etcd
+  podManagementPolicy: Parallel
+  updateStrategy: {type: OnDelete}
+  selector:
+    matchLabels:
+      {{- include "nxc.labels" . | nindent 6 }}
+      app.kubernetes.io/component: etcd
+      nexus.cluster/member: {{ $i | quote }}
+  template:
+    metadata:
+      labels:
+        {{- include "nxc.labels" . | nindent 8 }}
+        app.kubernetes.io/component: etcd
+        nexus.cluster/member: {{ $i | quote }}
+        nexus.cluster/dc: {{ $node.dc | quote }}
+    spec:
+      {{- include "nxc.commonPod" . | nindent 6 }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 15
+      securityContext: {runAsUser: 1000, runAsGroup: 1000, fsGroup: 1000}
+      nodeSelector:
+        {{- mergeOverwrite (deepCopy .Values.nodeSelector) (default dict $node.nodeSelector) | toYaml | nindent 8 }}
+      affinity:
+        {{- include "nxc.antiAffinity" (merge (dict "component" "etcd") .) | nindent 8 }}
+      containers:
+        - name: etcd
+          image: {{ .Values.etcd.image | quote }}
+          imagePullPolicy: {{ .Values.etcd.pullPolicy }}
+          command: [/usr/local/bin/etcd]
+          args:
+            - --name=$(POD_NAME)
+            - --data-dir=/var/lib/etcd
+            - --listen-client-urls=https://0.0.0.0:2379
+            - --advertise-client-urls=https://$(POD_NAME).{{ $name }}-etcd.{{ $domain }}:2379
+            - --listen-peer-urls=https://0.0.0.0:2380
+            - --initial-advertise-peer-urls=https://$(POD_NAME).{{ $name }}-etcd.{{ $domain }}:2380
+            - --initial-cluster-token={{ $name }}
+            - --initial-cluster-state=new
+            - --initial-cluster={{ $name }}-etcd-0-0=https://{{ $name }}-etcd-0-0.{{ $name }}-etcd.{{ $domain }}:2380,{{ $name }}-etcd-1-0=https://{{ $name }}-etcd-1-0.{{ $name }}-etcd.{{ $domain }}:2380,{{ $name }}-etcd-2-0=https://{{ $name }}-etcd-2-0.{{ $name }}-etcd.{{ $domain }}:2380
+            - --client-cert-auth=true
+            - --trusted-ca-file=/run/tls/ca.crt
+            - --cert-file=/run/tls/tls.crt
+            - --key-file=/run/tls/tls.key
+            - --peer-client-cert-auth=true
+            - --peer-trusted-ca-file=/run/tls/ca.crt
+            - --peer-cert-file=/run/tls/tls.crt
+            - --peer-key-file=/run/tls/tls.key
+          env:
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+          ports:
+            - {name: client, containerPort: 2379}
+            - {name: peer, containerPort: 2380}
+          readinessProbe:
+            exec:
+              command: [/usr/local/bin/etcdctl, --endpoints=https://localhost:2379, --cacert=/run/tls/ca.crt, --cert=/run/tls/tls.crt, --key=/run/tls/tls.key, endpoint, health]
+            periodSeconds: 5
+            timeoutSeconds: 4
+          livenessProbe:
+            tcpSocket: {port: 2379}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- .Values.etcd.resources | toYaml | nindent 12 }}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}, readOnlyRootFilesystem: true}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/etcd}
+            - {name: tls, mountPath: /run/tls, readOnly: true}
+      volumes:
+        - name: tls
+          secret:
+            secretName: {{ include "nxc.tls" . }}
+            defaultMode: 0440
+            items:
+              - {key: etcd-ca.crt, path: ca.crt}
+              - {key: etcd.crt, path: tls.crt}
+              - {key: etcd.key, path: tls.key}
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- if .Values.etcd.storageClass }}
+        storageClassName: {{ .Values.etcd.storageClass | quote }}
+        {{- end }}
+        resources: {requests: {storage: {{ .Values.etcd.storageSize }}}}
+{{- end }}
+{{- end }}

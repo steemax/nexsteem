@@ -1,0 +1,55 @@
+{{- $name := include "nxc.name" . -}}
+{{- $domain := include "nxc.domain" . -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}-etcd-auth-{{ .Release.Revision }}
+  labels:
+    {{- include "nxc.labels" . | nindent 4 }}
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "nxc.labels" . | nindent 8 }}
+        app.kubernetes.io/component: etcd-bootstrap
+    spec:
+      {{- include "nxc.commonPod" . | nindent 6 }}
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext: {runAsUser: 999, runAsGroup: 999, fsGroup: 999}
+      containers:
+        - name: initialize-auth
+          image: {{ .Values.postgres.image | quote }}
+          imagePullPolicy: {{ .Values.postgres.pullPolicy }}
+          command: [/opt/patroni/bin/python, /opt/nexus-postgres/etcd-auth.py]
+          env:
+            - {name: ETCD_SCOPE, value: {{ printf "/nexus-pg/%s/" $name | quote }}}
+            - {name: ETCD_CERT_USER, value: {{ printf "%s-etcd" $name | quote }}}
+            - name: ETCD_ENDPOINTS
+              value: {{ list (printf "https://%s-etcd-0-0.%s-etcd.%s:2379" $name $name $domain) (printf "https://%s-etcd-1-0.%s-etcd.%s:2379" $name $name $domain) (printf "https://%s-etcd-2-0.%s-etcd.%s:2379" $name $name $domain) | toJson | quote }}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}, readOnlyRootFilesystem: true}
+          resources:
+            {{- $job := get (default dict .Values.jobs) "etcdAuth" | default dict }}
+            {{- get $job "resources" | default (dict "requests" (dict "cpu" "50m" "memory" "64Mi") "limits" (dict "cpu" "500m" "memory" "128Mi")) | toYaml | nindent 12 }}
+          volumeMounts:
+            - {name: secrets, mountPath: /run/nexus-postgres/secrets, readOnly: true}
+            - {name: tls, mountPath: /run/nexus-postgres/etcd, readOnly: true}
+      volumes:
+        - name: secrets
+          secret:
+            secretName: {{ include "nxc.secret" . }}
+            defaultMode: 0440
+            items:
+              {{- range $key := list "etcd-root-password" "etcd-patroni-password" "etcd-proof-password" }}
+              - {key: {{ $key }}, path: {{ $key }}}
+              {{- end }}
+        - name: tls
+          secret:
+            secretName: {{ include "nxc.tls" . }}
+            defaultMode: 0440
+            items:
+              - {key: etcd-ca.crt, path: ca.crt}
+              - {key: etcd-client.crt, path: tls.crt}
+              - {key: etcd-client.key, path: tls.key}

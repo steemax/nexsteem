@@ -1,0 +1,73 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- range $component := list "etcd" "postgres" "router" "nexus" }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "nxc.name" $ }}-{{ $component }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "nxc.labels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $component }}
+  policyTypes: [Ingress]
+  ingress:
+    {{- if eq $component "etcd" }}
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $.Release.Name }}
+            matchExpressions:
+              - {key: app.kubernetes.io/component, operator: In, values: [postgres, nexus, etcd, etcd-bootstrap, schema-upgrade]}
+      ports: [{port: 2379, protocol: TCP}]
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $.Release.Name }}
+              app.kubernetes.io/component: etcd
+      ports: [{port: 2380, protocol: TCP}]
+    {{- else if eq $component "postgres" }}
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $.Release.Name }}
+            matchExpressions:
+              - {key: app.kubernetes.io/component, operator: In, values: [postgres, nexus, router, schema-upgrade]}
+      ports: [{port: 5432, protocol: TCP}, {port: 8008, protocol: TCP}]
+    {{- else if eq $component "router" }}
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $.Release.Name }}
+            matchExpressions:
+              - {key: app.kubernetes.io/component, operator: In, values: [postgres, nexus, schema-upgrade]}
+      ports: [{port: 5432, protocol: TCP}]
+    {{- else }}
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $.Release.Name }}
+              app.kubernetes.io/component: nexus
+      # Peers replicate over TLS and forward requests/collect signed monitoring
+      # over the supervisor frontend, independently of the ingress namespaces.
+      ports:
+        - {port: 8095, protocol: TCP}
+        - {port: 8081, protocol: TCP}
+        {{- range $.Values.service.dockerPorts }}
+        - {port: {{ .port }}, protocol: TCP}
+        {{- end }}
+    - from:
+        - namespaceSelector:
+            {{- if $.Values.networkPolicy.clientNamespaceSelector }}
+            {{- $.Values.networkPolicy.clientNamespaceSelector | toYaml | nindent 12 }}
+            {{- else }}
+            matchLabels: {kubernetes.io/metadata.name: {{ $.Release.Namespace }}}
+            {{- end }}
+      ports:
+        - {port: 8081, protocol: TCP}
+        {{- range $.Values.service.dockerPorts }}
+        - {port: {{ .port }}, protocol: TCP}
+        {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

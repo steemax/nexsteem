@@ -1,0 +1,11 @@
+{
+  "repository": "https://github.com/sonatype/nexus-public.git",
+  "tag": "release-3.96.4-01",
+  "version": "3.96.4-01",
+  "commit": "e60cdf28e5808a25c2524edb8b1550a0c7f08d82",
+  "source_license": "EPL-1.0",
+  "checked_on": "2026-10-11",
+  "java_major": 25,
+  "maven_image": "maven:3.9.11-eclipse-temurin-25@sha256:407c4423cec0cf2981055bc2c6c0dc211d9605b6669279b95997f2d1c7e91e2c",
+  "runtime_image": "eclipse-temurin:25-jre@sha256:bcc1a99b4bc676717bdc9841c363072ce10e3f34462c4017f7df08e730f485b0"
+}

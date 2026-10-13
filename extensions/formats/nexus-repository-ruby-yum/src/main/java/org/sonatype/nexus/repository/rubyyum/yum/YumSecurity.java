@@ -1,0 +1,3 @@
+/* SPDX-License-Identifier: EPL-1.0 */
+package org.sonatype.nexus.repository.rubyyum.yum;
+@org.springframework.stereotype.Component @org.springframework.context.annotation.Scope("prototype") @org.springframework.beans.factory.annotation.Qualifier("yum") public class YumSecurity extends org.sonatype.nexus.repository.rubyyum.RubyYumSecurityFacet { public YumSecurity(YumSecurityContributor contributor,@org.springframework.beans.factory.annotation.Qualifier("simple") org.sonatype.nexus.repository.security.VariableResolverAdapter resolver,org.sonatype.nexus.repository.security.ContentPermissionChecker checker) { super(contributor,resolver,checker); } }

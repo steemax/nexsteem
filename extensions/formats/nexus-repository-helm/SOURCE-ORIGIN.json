@@ -1,0 +1,8 @@
+{
+  "artifact": "nexus-repository-helm-3.30.1-01-sources.jar",
+  "sha256": "95327db95c2c4d7021bf3a7c9b7d86818a1c9e2b14740215f4f0bf9229ab4545",
+  "license": "EPL-1.0",
+  "source": "https://repo.maven.apache.org/maven2/org/sonatype/nexus/plugins/nexus-repository-helm/3.30.1-01/nexus-repository-helm-3.30.1-01-sources.jar",
+  "source_version": "3.30.1-01",
+  "upstream_core_version": "3.96.4-01"
+}

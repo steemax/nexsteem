@@ -1,0 +1,18 @@
+name: nexus-open
+services:
+  nexus:
+    image: ${NEXUS_IMAGE:-steemax/nexsteem:3.96.4-01-standalone-ext3}
+    platform: linux/amd64
+    ports:
+      - "127.0.0.1:8081:8081"
+    volumes:
+      - nexus-data:/var/lib/nexus
+    environment:
+      # HTTP is allowed only in this localhost development stack.
+      NEXUS_JAVA_OPTS: "-Xms512m -Xmx2g -XX:MaxDirectMemorySize=2g -Dnexus.oidc.allow-http=true -Dnexus.oidc.public-url=http://localhost:8081"
+    stop_grace_period: 180s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  nexus-data:
